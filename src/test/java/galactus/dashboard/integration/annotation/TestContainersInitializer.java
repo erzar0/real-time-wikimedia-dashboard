@@ -1,4 +1,4 @@
-package galactus.dashboard;
+package galactus.dashboard.integration.annotation;
 
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;

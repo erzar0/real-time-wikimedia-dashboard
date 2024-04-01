@@ -1,4 +1,4 @@
-package galactus.dashboard;
+package galactus.dashboard.integration.annotation;
 
 import org.springframework.test.context.ContextConfiguration;
 

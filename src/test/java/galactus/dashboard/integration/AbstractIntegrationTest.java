@@ -1,5 +1,7 @@
-package galactus.dashboard;
+package galactus.dashboard.integration;
 
+import galactus.dashboard.DashboardApplication;
+import galactus.dashboard.integration.annotation.EnableTestContainers;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 

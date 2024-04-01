@@ -15,38 +15,56 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+    compileClasspath {
+        resolutionStrategy.activateDependencyLocking()
+    }
 }
 
 repositories {
     mavenCentral()
 }
 
+ext {
+    springBootVersion = '3.2.4'
+    kafkaVersion = '7.6.0'
+    lombokVersion = '1.18.30'
+    postgresqlVersion = '42.7.3'
+    testcontainersVersion = '1.19.7'
+    restAssuredVersion = '5.4.0'
+    junitJupiterVersion = '5.10.2'
+}
+
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-data-rest'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-websocket'
-    implementation 'org.apache.kafka:kafka-streams'
-    implementation 'org.springframework.kafka:spring-kafka'
+    implementation "org.springframework.boot:spring-boot-starter-data-jpa:$springBootVersion"
+    implementation "org.springframework.boot:spring-boot-starter-data-rest:$springBootVersion"
+    implementation "org.springframework.boot:spring-boot-starter-web:$springBootVersion"
+    implementation "org.springframework.boot:spring-boot-starter-websocket:$springBootVersion"
+    implementation "org.apache.kafka:kafka-streams:$kafkaVersion"
+    implementation "org.springframework.kafka:spring-kafka:$kafkaVersion"
 
-    compileOnly 'org.projectlombok:lombok'
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
 
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+    runtimeOnly "org.postgresql:postgresql:$postgresqlVersion"
 
-    runtimeOnly 'org.postgresql:postgresql'
+    developmentOnly "org.springframework.boot:spring-boot-devtools:$springBootVersion"
+    developmentOnly "org.springframework.boot:spring-boot-docker-compose:$springBootVersion"
 
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:$springBootVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
 
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
-    testImplementation 'org.springframework.kafka:spring-kafka-test'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:kafka'
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'io.rest-assured:rest-assured'
+    testImplementation "org.springframework.boot:spring-boot-starter-test:$springBootVersion"
+    testImplementation "org.springframework.boot:spring-boot-testcontainers:$springBootVersion"
+    testImplementation "org.springframework.kafka:spring-kafka-test:$kafkaVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
+    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    testImplementation "org.testcontainers:kafka:$testcontainersVersion"
+    testImplementation "org.testcontainers:postgresql:$testcontainersVersion"
+    testImplementation "io.rest-assured:rest-assured:$restAssuredVersion"
+
+    testCompileOnly "org.projectlombok:lombok:$lombokVersion"
+
+    testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
+
 }
 
 tasks.named('test') {
