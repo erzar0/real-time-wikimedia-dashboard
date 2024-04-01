@@ -2,6 +2,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create
+  datasource:
+    url: jdbc:tc:postgresql:16.2://localhost:5432/test_database
+    username: user
+    password: password
 testcontainers:
   reuse:
     enable: true
