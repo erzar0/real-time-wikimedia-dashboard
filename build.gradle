@@ -40,15 +40,17 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-data-rest:$springBootVersion"
     implementation "org.springframework.boot:spring-boot-starter-web:$springBootVersion"
     implementation "org.springframework.boot:spring-boot-starter-websocket:$springBootVersion"
+    implementation "org.springframework.boot:spring-boot-starter-webflux:$springBootVersion"
     implementation "org.apache.kafka:kafka-streams:$kafkaStreamsVersion"
     implementation "org.springframework.kafka:spring-kafka:$kafkaVersion"
+
 
     compileOnly "org.projectlombok:lombok:$lombokVersion"
 
     runtimeOnly "org.postgresql:postgresql:$postgresqlVersion"
 
     developmentOnly "org.springframework.boot:spring-boot-devtools:$springBootVersion"
-    developmentOnly "org.springframework.boot:spring-boot-docker-compose:$springBootVersion"
+//    developmentOnly "org.springframework.boot:spring-boot-docker-compose:$springBootVersion"
 
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:$springBootVersion"
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
