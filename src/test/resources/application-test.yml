@@ -9,3 +9,6 @@ spring:
 testcontainers:
   reuse:
     enable: true
+logging:
+  level:
+    root: WARN

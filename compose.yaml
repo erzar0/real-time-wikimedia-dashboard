@@ -7,6 +7,9 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: 'WARN'
+      ZOOKEEPER_MAX_CNXNS: 100
+    tmpfs: "/datalog"
     ports:
       - "22181:2181"
 
@@ -22,9 +25,13 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CREATE_TOPICS: "test_topic:1:1,revision-create:1:1"
+      KAFKA_LOG4J_ROOT_LOGLEVEL: 'WARN'
+      KAFKA_LOG4J_LOGGERS: 'kafka=WARN,kafka.controller=WARN,kafka.log.LogCleaner=WARN,state.change.logger=WARN,kafka.producer.async.DefaultEventHandler=WARN'
+      KAFKA_CREATE_TOPICS: "test_topic:1:1,recentchange:1:1,recentchange.event_count:1:1"
     depends_on:
       - zookeeper
+    volumes:
+      - kafka-data:/kafka/data
 
   postgresql:
     image: postgres:16.2-alpine
@@ -51,3 +58,4 @@ services:
 
 volumes:
   postgresql-data:
+  kafka-data:

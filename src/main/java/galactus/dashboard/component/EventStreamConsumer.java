@@ -1,11 +1,16 @@
-package galactus.dashboard.components;
+package galactus.dashboard.component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.common.serialization.LongSerializer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.ParameterizedTypeReference;
@@ -18,6 +23,11 @@ import java.util.Properties;
 
 @Component
 public class EventStreamConsumer implements ApplicationRunner {
+
+
+    @Autowired
+    @Qualifier("kafkaProps")
+    private Properties kafkaProps;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -32,25 +42,18 @@ public class EventStreamConsumer implements ApplicationRunner {
                     .bodyToFlux(type)
                     .onErrorContinue((error, obj) -> System.out.printf("error:[%s], obj:[%s]%n", error, obj));
 
-            Properties kafkaProps = new Properties();
-            kafkaProps.put("bootstrap.servers", "kafka:9092"); // Replace with your Kafka broker's address
-            kafkaProps.put("key.serializer", StringSerializer.class.getName());
-            kafkaProps.put("value.serializer", StringSerializer.class.getName());
-
             KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProps);
 
             eventStream.subscribe(
                     content -> {
-                        ObjectMapper objectMapper = new ObjectMapper();
                         if (content != null && content.event() != null) {
-
+                            ObjectMapper objectMapper = new ObjectMapper();
                             try {
-                                JsonNode jsonNode = objectMapper.readTree(content.data());
+                                JsonNode dataJsonNode = objectMapper.readTree(content.data());
 
-                                ProducerRecord<String, String> record = new ProducerRecord<>("recentchange", jsonNode.toString());
+                                ProducerRecord<String, String> record = new ProducerRecord<>("recentchange", "null", dataJsonNode.toString());
+
                                 producer.send(record);
-
-                                System.out.println(record);
                             } catch (JsonProcessingException e) {
                                 throw new RuntimeException(e);
                             }
