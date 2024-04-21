@@ -7,7 +7,6 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Suppressed;
 import org.apache.kafka.streams.kstream.TimeWindows;
@@ -15,9 +14,11 @@ import org.apache.kafka.streams.kstream.Windowed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.util.TimeZone;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 import static org.apache.kafka.streams.kstream.Suppressed.BufferConfig.unbounded;
 
@@ -39,7 +40,7 @@ public class RecentChangeEventCountProcessor {
                 .count()
                 .suppress(Suppressed.untilWindowCloses(unbounded()))
                 .toStream()
-                .map((windowedKey, count) -> KeyValue.pair(windowedKey.toString(), count.toString()))
+                .map((windowedKey, count) -> KeyValue.pair(windowedKeyToString(windowedKey), count.toString()))
                 .peek((k, v) -> System.out.println("k: " + k + ", v: " + v))
                 .to("recentchange.event_count", Produced.with(STRING_SERDE, STRING_SERDE));
     }
@@ -51,5 +52,19 @@ public class RecentChangeEventCountProcessor {
         } catch (Exception e) {
             return null;
         }
+    }
+    static private String windowedKeyToString(Windowed<String> windowedKey) {
+
+        return String.format("[%s@%s/%s]"
+                , windowedKey.key()
+                , convertEpochToDateTime(windowedKey.window().startTime().getEpochSecond())
+                , convertEpochToDateTime(windowedKey.window().endTime().getEpochSecond()));
+    }
+
+    static private String convertEpochToDateTime(long epochMillis) {
+        Instant instant = Instant.ofEpochMilli(epochMillis);
+        LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return localDateTime.format(formatter);
     }
 }
