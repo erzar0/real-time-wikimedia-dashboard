@@ -36,7 +36,7 @@ public class RecentChangeEventCountProcessor {
                 .mapValues(RecentChangeEventCountProcessor::readJsonNode)
                 .filter((k, v) -> v != null)
                 .groupByKey()
-                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
+                .windowedBy(TimeWindows.ofSizeAndGrace(Duration.ofSeconds(10), Duration.ofSeconds(10)))
                 .count()
                 .suppress(Suppressed.untilWindowCloses(unbounded()))
                 .toStream()
@@ -61,8 +61,8 @@ public class RecentChangeEventCountProcessor {
                 , convertEpochToDateTime(windowedKey.window().endTime().getEpochSecond()));
     }
 
-    static private String convertEpochToDateTime(long epochMillis) {
-        Instant instant = Instant.ofEpochMilli(epochMillis);
+    static private String convertEpochToDateTime(long epochSecs) {
+        Instant instant = Instant.ofEpochSecond(epochSecs);
         LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         return localDateTime.format(formatter);

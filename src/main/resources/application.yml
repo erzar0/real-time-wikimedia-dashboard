@@ -7,9 +7,13 @@ spring:
     password: postgres
     driver-class-name: org.postgresql.Driver
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers:  kafka:9092
+    consumer:
+      group-id: dashboard-app
+    topic:
+      auto-create: true
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
     show-sql: true
     hibernate:
       ddl-auto: update

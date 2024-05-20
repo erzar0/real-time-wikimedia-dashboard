@@ -25,8 +25,6 @@ import static org.apache.kafka.streams.StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_C
 import static org.apache.kafka.streams.StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG;
 
 @Configuration
-@EnableKafka
-@EnableKafkaStreams
 public class KafkaConfig {
 
     @Value(value = "${spring.kafka.bootstrap-servers}")
