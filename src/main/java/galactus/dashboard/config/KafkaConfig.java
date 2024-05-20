@@ -68,7 +68,7 @@ public class KafkaConfig {
 
     @Bean(name = "kafkaConsumerProps")
     public Map<String,Object> kafkaConsumerProps(){
-        Map<String,Object> props=new HashMap<String,Object>();
+        Map<String,Object> props= new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, STRING_DESERIALIZER_CLASS_NAME);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, STRING_DESERIALIZER_CLASS_NAME);
