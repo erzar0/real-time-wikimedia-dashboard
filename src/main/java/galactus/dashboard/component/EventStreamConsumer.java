@@ -26,8 +26,8 @@ public class EventStreamConsumer implements ApplicationRunner {
 
 
     @Autowired
-    @Qualifier("kafkaProps")
-    private Properties kafkaProps;
+    @Qualifier("kafkaProducerProps")
+    private Properties kafkaProducerProps;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -42,7 +42,7 @@ public class EventStreamConsumer implements ApplicationRunner {
                     .bodyToFlux(type)
                     .onErrorContinue((error, obj) -> System.out.printf("error:[%s], obj:[%s]%n", error, obj));
 
-            KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProps);
+            KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProducerProps);
 
             eventStream.subscribe(
                     content -> {
