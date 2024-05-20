@@ -32,6 +32,9 @@ public class KafkaConfig {
     @Value(value = "${spring.kafka.bootstrap-servers}")
     private String bootstrapAddress;
 
+    @Value(value = "${spring.kafka.consumer.group-id}")
+    private String groupId;
+
     static final private String STRING_SERDE_CLASS_NAME = Serdes.String().getClass().getName();
     static final private String STRING_SERIALIZER_CLASS_NAME = StringSerializer.class.getName();
     static final private String STRING_DESERIALIZER_CLASS_NAME = StringDeserializer.class.getName();
@@ -54,12 +57,11 @@ public class KafkaConfig {
     }
 
     @Bean(name = "kafkaProducerProps")
-    Properties kafkaProducerProps(){
+    public Properties kafkaProducerProps(){
         Properties kafkaProps = new Properties();
         kafkaProps.put("bootstrap.servers", bootstrapAddress);
         kafkaProps.put("key.serializer", STRING_SERIALIZER_CLASS_NAME);
         kafkaProps.put("value.serializer", STRING_SERIALIZER_CLASS_NAME);
-        kafkaProps.put("auto.offset.reset", AUTO_OFFSET_RESET);
 
         return kafkaProps;
     }
@@ -70,8 +72,8 @@ public class KafkaConfig {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, STRING_DESERIALIZER_CLASS_NAME);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, STRING_DESERIALIZER_CLASS_NAME);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "temp-groupid.group");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, AUTO_OFFSET_RESET);
 
         return props;
     }

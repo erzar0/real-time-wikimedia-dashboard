@@ -12,7 +12,7 @@ public class KafkaAggregatesConsumerService {
     @KafkaListener(topics="recentchange.event_count")
     public void consume(@Payload String message) {
         if(isNumeric(message)) {
-            template.convertAndSend("/topic/temperature", message);
+            template.convertAndSend("/topic/recentchange-event-count", message);
         }
 
     }
