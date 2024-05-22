@@ -1,6 +1,7 @@
 package galactus.dashboard.component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -17,10 +18,11 @@ import reactor.core.publisher.Flux;
 
 import java.util.Properties;
 
+import static java.util.UUID.randomUUID;
+
 
 @Component
 public class EventStreamConsumer implements ApplicationRunner {
-
 
     @Autowired
     @Qualifier("kafkaProducerProps")
@@ -31,7 +33,8 @@ public class EventStreamConsumer implements ApplicationRunner {
         try {
             WebClient client = WebClient.create("https://stream.wikimedia.org/v2/stream");
 
-            ParameterizedTypeReference<ServerSentEvent<String>> type = new ParameterizedTypeReference<>() {};
+            ParameterizedTypeReference<ServerSentEvent<String>> type = new ParameterizedTypeReference<>() {
+            };
 
             Flux<ServerSentEvent<String>> eventStream = client.get()
                     .uri("/recentchange")
@@ -43,16 +46,16 @@ public class EventStreamConsumer implements ApplicationRunner {
 
             eventStream.subscribe(
                     content -> {
-                        if (content != null && content.event() != null) {
-                            ObjectMapper objectMapper = new ObjectMapper();
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        if (content != null && content.data() != null) {
                             try {
                                 JsonNode dataJsonNode = objectMapper.readTree(content.data());
 
-                                ProducerRecord<String, String> record = new ProducerRecord<>("recentchange", "null", dataJsonNode.toString());
+                                ProducerRecord<String, String> record = new ProducerRecord<>("recentchange", randomUUID().toString(), dataJsonNode.toString());
 
                                 producer.send(record);
                             } catch (JsonProcessingException e) {
-                                throw new RuntimeException(e);
+                                System.err.println("Error processing event: " + e);
                             }
                         } else {
                             System.err.println("Received null content or event from SSE stream");
@@ -60,8 +63,7 @@ public class EventStreamConsumer implements ApplicationRunner {
                     },
                     error -> System.err.println("Error receiving SSE: " + error)
             );
-        } catch (Exception exception)
-        {
+        } catch (Exception exception) {
             System.out.println(exception.toString());
         }
     }
