@@ -51,7 +51,7 @@ public class EventStreamConsumer implements ApplicationRunner {
                             try {
                                 JsonNode dataJsonNode = objectMapper.readTree(content.data());
 
-                                ProducerRecord<String, String> record = new ProducerRecord<>("recentchange", randomUUID().toString(), dataJsonNode.toString());
+                                ProducerRecord<String, String> record = new ProducerRecord<>("recentchange", dataJsonNode.get("user").toString(), dataJsonNode.toString());
 
                                 producer.send(record);
                             } catch (JsonProcessingException e) {

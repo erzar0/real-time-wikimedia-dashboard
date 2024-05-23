@@ -15,6 +15,7 @@ import java.time.format.DateTimeFormatter;
 public abstract class BaseEventProcessor {
 
     protected static final Serde<String> STRING_SERDE = Serdes.String();
+    protected static final Serde<Integer> INTEGER_SERDE = Serdes.Integer();
     protected static final ObjectMapper mapper = new ObjectMapper();
 
     public abstract void buildPipeline(StreamsBuilder streamsBuilder);

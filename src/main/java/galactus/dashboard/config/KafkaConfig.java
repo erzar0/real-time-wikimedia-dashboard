@@ -24,6 +24,7 @@ import static org.apache.kafka.streams.StreamsConfig.BOOTSTRAP_SERVERS_CONFIG;
 import static org.apache.kafka.streams.StreamsConfig.COMMIT_INTERVAL_MS_CONFIG;
 import static org.apache.kafka.streams.StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG;
 import static org.apache.kafka.streams.StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG;
+import static org.apache.kafka.streams.StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG;
 import static org.apache.kafka.streams.StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG;
 
 @Configuration
@@ -40,6 +41,7 @@ public class KafkaConfig {
     static final private String STRING_DESERIALIZER_CLASS_NAME = StringDeserializer.class.getName();
     static final private String AUTO_OFFSET_RESET = "latest";
     static final private String COMMIT_INTERVAL = "5000";
+    static final private String REQUEST_TIMEOUT_MS = "120000";
     static final private String CACHE_MAX_BYTES = "0";
 
 
@@ -52,6 +54,7 @@ public class KafkaConfig {
         props.put(DEFAULT_VALUE_SERDE_CLASS_CONFIG, STRING_SERDE_CLASS_NAME);
         props.put(COMMIT_INTERVAL_MS_CONFIG, COMMIT_INTERVAL);
         props.put(STATESTORE_CACHE_MAX_BYTES_CONFIG, CACHE_MAX_BYTES);
+        props.put(REQUEST_TIMEOUT_MS_CONFIG, REQUEST_TIMEOUT_MS);
 
         return new KafkaStreamsConfiguration(props);
     }
@@ -75,6 +78,7 @@ public class KafkaConfig {
         props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, AUTO_OFFSET_RESET);
 
+
         return props;
     }
     @Bean
@@ -86,7 +90,7 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         return factory;
-
     }
+
 
 }
