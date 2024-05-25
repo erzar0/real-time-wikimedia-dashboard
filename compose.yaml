@@ -39,7 +39,7 @@ services:
       while ! nc -z kafka 9092; do
         sleep 1;
       done;
-      # Set cleanup.policy=compact for the recentchange topic
+      # Set cleanup.policy=compact for the recentchange.active_users topic
       kafka-configs --alter --bootstrap-server kafka:9092 --entity-type topics --entity-name recentchange.active_users --add-config cleanup.policy=compact
 
   postgresql:
@@ -62,5 +62,3 @@ services:
     depends_on:
       - kafka
       - postgresql
-
-volumes:

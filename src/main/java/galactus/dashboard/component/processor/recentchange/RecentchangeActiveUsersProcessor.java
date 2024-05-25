@@ -17,6 +17,7 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,7 +41,7 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
         }
     }
 
-    private static String serializeMapToJson(ConcurrentHashMap<String, WikiUser> map) {
+    private static String serializeCollectionToJson(Collection<WikiUser> map) {
         try {
             return mapper.writeValueAsString(map);
         } catch (JsonProcessingException e) {
@@ -57,7 +58,6 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
                 .mapValues(RecentchangeActiveUsersProcessor::readJsonNode)
                 .filter((k, v) -> v.hasNonNull("length")
                         && v.hasNonNull("bot")
-                        && v.hasNonNull("user")
                         && v.get("length").hasNonNull("old")
                         && v.get("length").hasNonNull("new"))
                 .mapValues(RecentchangeActiveUsersProcessor::serializeJsonNode)
@@ -78,14 +78,15 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
 
                                 return map;
                             } catch (JsonProcessingException e) {
-                                throw new RuntimeException(e);
+                                System.out.println("Polacy nic się nie stało");
+                                return map;
                             }
                         },
                         Materialized.with(STRING_SERDE, new JsonSerde<>(ConcurrentHashMap.class)))
                 .suppress(Suppressed.untilTimeLimit(Duration.ofSeconds(30), Suppressed.BufferConfig.unbounded()))
                 .toStream()
                 .map((windowedKey, map) -> {
-                    String jsonString = serializeMapToJson(map);
+                    String jsonString = serializeCollectionToJson(map.values());
                     return KeyValue.pair(windowedKeyToString(windowedKey), jsonString);
                 })
                 .peek((k, v) -> System.out.println("k: " + k + ", top list: " + v))
