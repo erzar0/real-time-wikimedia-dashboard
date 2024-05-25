@@ -14,9 +14,9 @@ import java.time.format.DateTimeFormatter;
 
 public abstract class BaseEventProcessor {
 
+    protected static final ObjectMapper mapper = new ObjectMapper();
     protected static final Serde<String> STRING_SERDE = Serdes.String();
     protected static final Serde<Integer> INTEGER_SERDE = Serdes.Integer();
-    protected static final ObjectMapper mapper = new ObjectMapper();
 
     public abstract void buildPipeline(StreamsBuilder streamsBuilder);
 
@@ -28,10 +28,17 @@ public abstract class BaseEventProcessor {
         }
     }
 
+    protected static String serializeJsonNode(JsonNode value) {
+        try {
+            return mapper.writeValueAsString(value);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     protected static String windowedKeyToString(Windowed<String> windowedKey) {
-        return String.format("%s@%s/%s",
+        return String.format("%s@%s",
                 windowedKey.key(),
-                convertEpochToDateTime(windowedKey.window().startTime().getEpochSecond()),
                 convertEpochToDateTime(windowedKey.window().endTime().getEpochSecond()));
     }
 

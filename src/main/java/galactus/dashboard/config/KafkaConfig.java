@@ -61,12 +61,12 @@ public class KafkaConfig {
 
     @Bean(name = "kafkaProducerProps")
     public Properties kafkaProducerProps(){
-        Properties kafkaProps = new Properties();
-        kafkaProps.put("bootstrap.servers", bootstrapAddress);
-        kafkaProps.put("key.serializer", STRING_SERIALIZER_CLASS_NAME);
-        kafkaProps.put("value.serializer", STRING_SERIALIZER_CLASS_NAME);
+        Properties props = new Properties();
+        props.put("bootstrap.servers", bootstrapAddress);
+        props.put("key.serializer", STRING_SERIALIZER_CLASS_NAME);
+        props.put("value.serializer", STRING_SERIALIZER_CLASS_NAME);
 
-        return kafkaProps;
+        return props;
     }
 
     @Bean(name = "kafkaConsumerProps")
@@ -77,7 +77,6 @@ public class KafkaConfig {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, STRING_DESERIALIZER_CLASS_NAME);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, AUTO_OFFSET_RESET);
-
 
         return props;
     }

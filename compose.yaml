@@ -25,11 +25,22 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_LOG4J_ROOT_LOGLEVEL: 'WARN'
       KAFKA_LOG4J_LOGGERS: 'kafka=WARN,kafka.controller=WARN,kafka.log.LogCleaner=WARN,state.change.logger=WARN,kafka.producer.async.DefaultEventHandler=WARN'
-      KAFKA_CREATE_TOPICS: "test_topic:1:1,recentchange:1:1,recentchange.event_count:1:1,recentchange.length_change:1:1,recentchange.most_active_users:1:1"
+      KAFKA_CREATE_TOPICS: "test_topic:1:1,recentchange:1:1,recentchange.event_count:1:1,recentchange.length_change:1:1,recentchange.active_users:1:1"
     depends_on:
       - zookeeper
-    volumes:
-      - kafka-data:/kafka/data
+
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.4.4
+    depends_on:
+      - kafka
+    entrypoint: /bin/sh -c
+    command: |
+      # Wait for Kafka to be ready
+      while ! nc -z kafka 9092; do
+        sleep 1;
+      done;
+      # Set cleanup.policy=compact for the recentchange topic
+      kafka-configs --alter --bootstrap-server kafka:9092 --entity-type topics --entity-name recentchange.active_users --add-config cleanup.policy=compact
 
   postgresql:
     image: postgres:16.2-alpine
@@ -40,8 +51,6 @@ services:
       POSTGRES_DB: mydatabase
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgresql-data:/var/lib/postgresql/data
 
   spring-boot-app:
     build:
@@ -55,5 +64,3 @@ services:
       - postgresql
 
 volumes:
-  postgresql-data:
-  kafka-data:

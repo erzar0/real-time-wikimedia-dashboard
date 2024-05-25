@@ -47,13 +47,14 @@ public class EventStreamConsumer implements ApplicationRunner {
             eventStream.subscribe(
                     content -> {
                         ObjectMapper objectMapper = new ObjectMapper();
-                        if (content != null && content.data() != null) {
+                        if (content != null && content.data() != null ) {
                             try {
                                 JsonNode dataJsonNode = objectMapper.readTree(content.data());
 
-                                ProducerRecord<String, String> record = new ProducerRecord<>("recentchange", dataJsonNode.get("user").toString(), dataJsonNode.toString());
-
-                                producer.send(record);
+                                if(dataJsonNode.hasNonNull("user")) {
+                                    ProducerRecord<String, String> record = new ProducerRecord<>("recentchange", dataJsonNode.get("user").toString(), dataJsonNode.toString());
+                                    producer.send(record);
+                                }
                             } catch (JsonProcessingException e) {
                                 System.err.println("Error processing event: " + e);
                             }
