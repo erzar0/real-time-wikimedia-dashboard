@@ -12,7 +12,17 @@ public class KafkaAggregatesConsumerService {
     SimpMessagingTemplate template;
 
     @KafkaListener(topics = "recentchange.event_count")
-    public void consume(@Payload String message) {
+    public void consumeRecentchangeEventCount(@Payload String message) {
         template.convertAndSend("/topic/recentchange-event-count", message);
+    }
+
+    @KafkaListener(topics = "recentchange.active_users")
+    public void consumeRecentchangeActiveUsers(@Payload String message) {
+        template.convertAndSend("/topic/recentchange-active-users", message);
+    }
+
+    @KafkaListener(topics = "recentchange.length_change")
+    public void consumeRecentchangeLengthChange(@Payload String message) {
+        template.convertAndSend("/topic/recentchange-length-change", message);
     }
 }
