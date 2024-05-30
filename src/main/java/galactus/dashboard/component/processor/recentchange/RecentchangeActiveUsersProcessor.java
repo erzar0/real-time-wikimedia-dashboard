@@ -1,7 +1,11 @@
 package galactus.dashboard.component.processor.recentchange;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import galactus.dashboard.component.processor.BaseEventProcessor;
 import lombok.Data;
 import org.apache.kafka.streams.KeyValue;
@@ -13,11 +17,17 @@ import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Suppressed;
 import org.apache.kafka.streams.kstream.TimeWindows;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.configurationprocessor.json.JSONArray;
 import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -30,7 +40,8 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
         AtomicInteger changesLength = new AtomicInteger();
         boolean isBot;
 
-        public WikiUser(String username, int changesLength, boolean isBot) {
+        @JsonCreator
+        public WikiUser(@JsonProperty("username") String username, @JsonProperty("changesLength") int changesLength, @JsonProperty("bot") boolean isBot) {
             this.username = username;
             this.changesLength.set(changesLength);
             this.isBot = isBot;
@@ -41,9 +52,42 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
         }
     }
 
-    private static String serializeCollectionToJson(Collection<WikiUser> map) {
+    private static String cropUsersCollection(String serializedWikiUsers) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<WikiUser> users = new ArrayList<>();
+        List<WikiUser> bots = new ArrayList<>();
+
+        List<WikiUser> list = objectMapper.readValue(serializedWikiUsers, new TypeReference<>() {
+        });
+
+        // Iterate over the list
+        for (WikiUser wikiUser : list) {
+            if (wikiUser.isBot()) {
+                bots.add(wikiUser);
+            } else {
+                users.add(wikiUser);
+            }
+        }
+
+        users.sort(Comparator.comparingInt(a -> a.getChangesLength().get()));
+
+        bots.sort(Comparator.comparingInt(a -> a.getChangesLength().get()));
+
+        List<WikiUser> topUsersMostChanges = users.subList(Math.max(users.size() - 10, 0), users.size());
+        List<WikiUser> topUsersLeastChanges = users.subList(0, Math.min(10, users.size()));
+
+        List<WikiUser> topBotsMostChanges = bots.subList(Math.max(bots.size() - 10, 0), bots.size());
+        List<WikiUser> topBotsLeastChanges = bots.subList(0, Math.min(10, bots.size()));
+
+        Map<String, List<WikiUser>> resultMap = new HashMap<>();
+
+        resultMap.put("topUsersMostChanges", topUsersMostChanges);
+        resultMap.put("topUsersLeastChanges", topUsersLeastChanges);
+        resultMap.put("topBotsMostChanges", topBotsMostChanges);
+        resultMap.put("topBotsLeastChanges", topBotsLeastChanges);
+
         try {
-            return mapper.writeValueAsString(map);
+            return mapper.writeValueAsString(resultMap);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -85,11 +129,23 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
                         Materialized.with(STRING_SERDE, new JsonSerde<>(ConcurrentHashMap.class)))
                 .suppress(Suppressed.untilTimeLimit(Duration.ofSeconds(30), Suppressed.BufferConfig.unbounded()))
                 .toStream()
-                .map((windowedKey, map) -> {
-                    String jsonString = serializeCollectionToJson(map.values());
-                    return KeyValue.pair(windowedKeyToString(windowedKey), jsonString);
+                .peek((k, v) -> {
+                    try {
+                        System.out.println(mapper.writeValueAsString(v.values()));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
                 })
-//                .peek((k, v) -> System.out.println("k: " + k + ", top list: " + v))
+                .map((windowedKey, map) -> {
+                    try {
+                        String jsonString = mapper.writeValueAsString(map.values());
+                        jsonString = cropUsersCollection(jsonString);
+                        return KeyValue.pair(windowedKeyToString(windowedKey), jsonString);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .peek((k, v) -> System.out.println("k: " + k + ", top list: " + v))
                 .to("recentchange.active_users", Produced.with(STRING_SERDE, STRING_SERDE));
 
     }

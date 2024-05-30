@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import galactus.dashboard.component.processor.recentchange.RecentchangeActiveUsersProcessor;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import static java.util.UUID.randomUUID;
@@ -39,11 +45,7 @@ public class EventStreamConsumer implements ApplicationRunner {
             Flux<ServerSentEvent<String>> eventStream = client.get()
                     .uri("/recentchange")
                     .retrieve()
-                    .bodyToFlux(type)
-                    .onErrorResume(throwable -> {
-                        System.err.println("Error occurred in SSE stream: " + throwable);
-                        return Flux.empty();
-                    });
+                    .bodyToFlux(type);
 
             KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProducerProps);
 

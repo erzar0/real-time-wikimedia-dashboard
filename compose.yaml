@@ -63,3 +63,4 @@ services:
     depends_on:
       - kafka
       - postgresql
+      - kafka-setup
