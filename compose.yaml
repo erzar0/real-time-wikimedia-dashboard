@@ -41,6 +41,7 @@ services:
       done;
       # Set cleanup.policy=compact for the recentchange.active_users topic
       kafka-configs --alter --bootstrap-server kafka:9092 --entity-type topics --entity-name recentchange.active_users --add-config cleanup.policy=compact
+      kafka-configs --alter --bootstrap-server kafka:9092 --entity-type topics --entity-name recentchange.active_users -add-config max.message.bytes=10485880
 
   postgresql:
     image: postgres:16.2-alpine

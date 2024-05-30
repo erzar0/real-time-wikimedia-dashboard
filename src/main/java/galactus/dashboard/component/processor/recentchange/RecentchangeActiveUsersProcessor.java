@@ -89,7 +89,7 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
                     String jsonString = serializeCollectionToJson(map.values());
                     return KeyValue.pair(windowedKeyToString(windowedKey), jsonString);
                 })
-                .peek((k, v) -> System.out.println("k: " + k + ", top list: " + v))
+//                .peek((k, v) -> System.out.println("k: " + k + ", top list: " + v))
                 .to("recentchange.active_users", Produced.with(STRING_SERDE, STRING_SERDE));
 
     }

@@ -4,6 +4,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.streams.StreamsConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,6 +44,7 @@ public class KafkaConfig {
     static final private String COMMIT_INTERVAL = "5000";
     static final private String REQUEST_TIMEOUT_MS = "120000";
     static final private String CACHE_MAX_BYTES = "0";
+    static final private String MAX_REQUEST_SIZE = "10485880";
 
 
     @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
@@ -55,6 +57,7 @@ public class KafkaConfig {
         props.put(COMMIT_INTERVAL_MS_CONFIG, COMMIT_INTERVAL);
         props.put(STATESTORE_CACHE_MAX_BYTES_CONFIG, CACHE_MAX_BYTES);
         props.put(REQUEST_TIMEOUT_MS_CONFIG, REQUEST_TIMEOUT_MS);
+        props.put(StreamsConfig.producerPrefix("max.request.size"), MAX_REQUEST_SIZE);
 
         return new KafkaStreamsConfiguration(props);
     }
@@ -65,6 +68,7 @@ public class KafkaConfig {
         props.put("bootstrap.servers", bootstrapAddress);
         props.put("key.serializer", STRING_SERIALIZER_CLASS_NAME);
         props.put("value.serializer", STRING_SERIALIZER_CLASS_NAME);
+        props.put("max.request.size", MAX_REQUEST_SIZE);
 
         return props;
     }

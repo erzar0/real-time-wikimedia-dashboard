@@ -40,18 +40,21 @@ public class EventStreamConsumer implements ApplicationRunner {
                     .uri("/recentchange")
                     .retrieve()
                     .bodyToFlux(type)
-                    .onErrorContinue((error, obj) -> System.out.printf("error:[%s], obj:[%s]%n", error, obj));
+                    .onErrorResume(throwable -> {
+                        System.err.println("Error occurred in SSE stream: " + throwable);
+                        return Flux.empty();
+                    });
 
             KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProducerProps);
 
             eventStream.subscribe(
                     content -> {
                         ObjectMapper objectMapper = new ObjectMapper();
-                        if (content != null && content.data() != null ) {
+                        if (content != null && content.data() != null) {
                             try {
                                 JsonNode dataJsonNode = objectMapper.readTree(content.data());
 
-                                if(dataJsonNode.hasNonNull("user")) {
+                                if (dataJsonNode.hasNonNull("user")) {
                                     ProducerRecord<String, String> record = new ProducerRecord<>("recentchange", dataJsonNode.get("user").toString(), dataJsonNode.toString());
                                     producer.send(record);
                                 }
@@ -63,6 +66,8 @@ public class EventStreamConsumer implements ApplicationRunner {
                         }
                     },
                     error -> System.err.println("Error receiving SSE: " + error)
+                    , () -> {
+                    }
             );
         } catch (Exception exception) {
             System.out.println(exception.toString());
