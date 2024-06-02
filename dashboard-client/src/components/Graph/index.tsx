@@ -1,19 +1,27 @@
 import { LineChart } from "@mui/x-charts/LineChart";
 import MessageProps from "../../types/MessageProps";
 
-const Graph: React.FC<MessageProps> = ({ messages, timestamps }) => {
+const Graph: React.FC<MessageProps> = ({
+  messages,
+  timestamps,
+  title,
+  xAxisLabel,
+  yAxisLabel,
+}) => {
   return (
-    <LineChart
-      xAxis={[{ data: timestamps }]}
-      series={[
-        {
-          data: messages.map((val) => parseFloat(val)),
-          area: true,
-        },
-      ]}
-      width={500}
-      height={300}
-    />
+    <div className="widget">
+      <h2>{title}</h2>
+      <LineChart
+        title={title}
+        series={[
+          {
+            data: messages.map((val) => parseFloat(val)),
+            area: true,
+            label: yAxisLabel,
+          },
+        ]}
+      />
+    </div>
   );
 };
 

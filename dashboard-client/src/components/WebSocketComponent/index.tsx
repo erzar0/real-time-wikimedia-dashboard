@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import MessageProps from "../../types/MessageProps";
+import ChartConfigProps from "../../types/ChartConfigProps";
 
 interface WebSocketComponentProps {
   url: string;
   topic: string;
   keepMessagesCount: number;
   messageProcessor: React.FC<MessageProps>;
+  chartConfig: ChartConfigProps;
 }
 
 const WebSocketComponent: React.FC<WebSocketComponentProps> = ({
@@ -15,9 +17,10 @@ const WebSocketComponent: React.FC<WebSocketComponentProps> = ({
   topic,
   keepMessagesCount,
   messageProcessor: MessageProcessor,
+  chartConfig,
 }) => {
   const [messages, setMessages] = useState<string[]>([]);
-  const [timestamps, setTimestamps] = useState<Date[]>([]);
+  const [timestamps, setTimestamps] = useState<string[]>([]);
 
   useEffect(() => {
     const socket = new SockJS(url);
@@ -35,21 +38,29 @@ const WebSocketComponent: React.FC<WebSocketComponentProps> = ({
     stompClient.onConnect = (frame) => {
       console.log("Connected:", frame);
       stompClient.subscribe(topic, (message) => {
-        console.log("Message received:", message.body);
-        setMessages((prevMessages) => {
-          const newMessages = [...prevMessages, message.body];
-          if (newMessages.length > keepMessagesCount) {
-            return newMessages.slice(1);
-          }
-          return newMessages;
-        });
-        setTimestamps((prevTimestamps) => {
-          const newTimestamps = [...prevTimestamps, new Date()];
-          if (newTimestamps.length > keepMessagesCount) {
-            return newTimestamps.slice(1);
-          }
-          return newTimestamps;
-        });
+        if (
+          message.body &&
+          message.body !== "" &&
+          message.command === "MESSAGE"
+        ) {
+          setMessages((prevMessages) => {
+            const newMessages = [...prevMessages, message.body];
+            if (newMessages.length > keepMessagesCount) {
+              return newMessages.slice(1);
+            }
+            return newMessages;
+          });
+          setTimestamps((prevTimestamps) => {
+            const newTimestamps =
+              prevTimestamps.length > 0
+                ? [...prevTimestamps, new Date().toLocaleTimeString()]
+                : [new Date().toLocaleTimeString()];
+            if (newTimestamps.length > keepMessagesCount) {
+              return newTimestamps.slice(1);
+            }
+            return newTimestamps;
+          });
+        }
       });
     };
 
@@ -65,11 +76,11 @@ const WebSocketComponent: React.FC<WebSocketComponentProps> = ({
   }, [url, topic, keepMessagesCount]);
 
   return (
-    <div>
-      <p>WebSocket connection to {url}</p>
-      <p>Subscribed to topic: {topic}</p>
-      <MessageProcessor timestamps={timestamps} messages={messages} />
-    </div>
+    <MessageProcessor
+      timestamps={timestamps}
+      messages={messages}
+      {...chartConfig}
+    />
   );
 };
 
