@@ -27,16 +27,12 @@ const WebSocketComponent: React.FC<WebSocketComponentProps> = ({
 
     const stompClient = new Client({
       webSocketFactory: () => socket,
-      debug: (str) => {
-        console.log(str);
-      },
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
     });
 
     stompClient.onConnect = (frame) => {
-      console.log("Connected:", frame);
       stompClient.subscribe(topic, (message) => {
         if (
           message.body &&
@@ -53,8 +49,8 @@ const WebSocketComponent: React.FC<WebSocketComponentProps> = ({
           setTimestamps((prevTimestamps) => {
             const newTimestamps =
               prevTimestamps.length > 0
-                ? [...prevTimestamps, new Date().toLocaleTimeString()]
-                : [new Date().toLocaleTimeString()];
+                ? [...prevTimestamps, new Date().getUTCSeconds().toString()]
+                : [new Date().getUTCSeconds().toString()];
             if (newTimestamps.length > keepMessagesCount) {
               return newTimestamps.slice(1);
             }

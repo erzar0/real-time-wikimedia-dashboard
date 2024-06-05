@@ -37,6 +37,7 @@ main {
 
 .widget {
   margin-left: 100px;
+  list-style-type: none;
   width: 50%;
   height: 500px;
   margin-bottom: 40px;

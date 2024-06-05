@@ -1,6 +1,8 @@
 package galactus.dashboard.component.processor.recentchange;
 
 import galactus.dashboard.component.processor.BaseEventProcessor;
+import galactus.dashboard.entity.RecentchangeEventCountEntity;
+import galactus.dashboard.repository.RecentchangeEventCountRepository;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
@@ -19,18 +21,25 @@ import static org.apache.kafka.streams.kstream.Suppressed.BufferConfig.unbounded
 public class RecentchangeEventCountProcessor extends BaseEventProcessor {
 
     @Autowired
+    private RecentchangeEventCountRepository eventchangeEventCountRepository;
+
+    @Autowired
     @Override
     public void buildPipeline(StreamsBuilder streamsBuilder) {
 
         streamsBuilder.stream("recentchange", Consumed.with(STRING_SERDE, STRING_SERDE))
                 .filter((k, v) -> v != null)
                 .groupBy((k, v) -> "", Grouped.with(STRING_SERDE, STRING_SERDE))
-                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
+                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(3)))
                 .count()
                 .suppress(Suppressed.untilWindowCloses(unbounded()))
                 .toStream()
                 .map((windowedKey, count) -> KeyValue.pair(windowedKeyToString(windowedKey), count.toString()))
-                .peek((k, v) -> System.out.println("k: " + k + ", event count: " + v))
+                .peek((k, v) -> {
+                    System.out.println("k: " + k + ", event count: " + v);
+                    RecentchangeEventCountEntity e = new RecentchangeEventCountEntity(Integer.parseInt(v));
+                    eventchangeEventCountRepository.save(e);
+                })
                 .to("recentchange.event_count", Produced.with(STRING_SERDE, STRING_SERDE));
 
     }

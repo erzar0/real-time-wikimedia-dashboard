@@ -21,25 +21,27 @@ const RankingCharts: React.FC<MessageProps> = ({
     }));
 
   return (
-    <div className="widget">
+    <ul>
       {Object.keys(data).map((key) => (
-        <div>
+        <li className="widget" key={key}>
           <h2>{key}</h2>
-          <BarChart
-            dataset={chartData(key)}
-            yAxis={[{ scaleType: "band", dataKey: "username" }]}
-            series={[
-              {
-                dataKey: "changesLength",
-                label: xAxisLabel,
-              },
-            ]}
-            layout="horizontal"
-            title={title}
-          />
-        </div>
+          <div style={{ width: "100%", height: "500px", marginBottom: "40px" }}>
+            <BarChart
+              dataset={chartData(key)}
+              yAxis={[{ scaleType: "band", dataKey: "username" }]}
+              series={[
+                {
+                  dataKey: "changesLength",
+                  label: xAxisLabel,
+                },
+              ]}
+              layout="horizontal"
+              title={title}
+            />
+          </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 };
 

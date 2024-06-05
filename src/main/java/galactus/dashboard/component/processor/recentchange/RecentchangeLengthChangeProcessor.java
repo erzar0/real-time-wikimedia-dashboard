@@ -1,6 +1,8 @@
 package galactus.dashboard.component.processor.recentchange;
 
 import galactus.dashboard.component.processor.BaseEventProcessor;
+import galactus.dashboard.entity.RecentchangeLengthChangeEntity;
+import galactus.dashboard.repository.RecentchangeLengthChangeRepository;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
@@ -20,6 +22,9 @@ import static org.apache.kafka.streams.kstream.Suppressed.BufferConfig.unbounded
 public class RecentchangeLengthChangeProcessor extends BaseEventProcessor {
 
     @Autowired
+    RecentchangeLengthChangeRepository recentchangeLengthChangeRepository;
+
+    @Autowired
     @Override
     public void buildPipeline(StreamsBuilder streamsBuilder) {
 
@@ -31,7 +36,7 @@ public class RecentchangeLengthChangeProcessor extends BaseEventProcessor {
                 .filter((k, v) -> v.hasNonNull("old") && v.hasNonNull("new"))
                 .mapValues((k, v) -> v.get("new").asInt() - v.get("old").asInt())
                 .groupBy((k, v) -> "", Grouped.with(STRING_SERDE, INTEGER_SERDE))
-                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
+                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(3)))
                 .aggregate(
                         () -> 0,
                         (k, v, agg) -> agg + v,
@@ -39,7 +44,12 @@ public class RecentchangeLengthChangeProcessor extends BaseEventProcessor {
                 .suppress(Suppressed.untilWindowCloses(unbounded()))
                 .toStream()
                 .map((windowedKey, aggregate) -> KeyValue.pair(windowedKeyToString(windowedKey), aggregate.toString()))
-                .peek((k, v) -> System.out.println("k: " + k + ", length change: " + v))
+                .peek((k, v) ->
+                        {
+                            System.out.println("k: " + k + ", length change: " + v);
+                            RecentchangeLengthChangeEntity e = new RecentchangeLengthChangeEntity(Integer.parseInt(v));
+                            recentchangeLengthChangeRepository.save(e);
+                        })
                 .to("recentchange.length_change", Produced.with(STRING_SERDE, STRING_SERDE));
 
     }

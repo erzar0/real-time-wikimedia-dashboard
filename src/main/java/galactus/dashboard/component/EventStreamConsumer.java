@@ -17,14 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
-
-import static java.util.UUID.randomUUID;
 
 
 @Component
@@ -46,6 +39,10 @@ public class EventStreamConsumer implements ApplicationRunner {
                     .uri("/recentchange")
                     .retrieve()
                     .bodyToFlux(type);
+            eventStream.onErrorResume(error -> {
+                System.out.println("Event stream error");
+                return eventStream;
+            });
 
             KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProducerProps);
 
@@ -67,9 +64,8 @@ public class EventStreamConsumer implements ApplicationRunner {
                             System.err.println("Received null content or event from SSE stream");
                         }
                     },
-                    error -> System.err.println("Error receiving SSE: " + error)
-                    , () -> {
-                    }
+                    error -> run(null)
+
             );
         } catch (Exception exception) {
             System.out.println(exception.toString());

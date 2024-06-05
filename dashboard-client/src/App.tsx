@@ -22,8 +22,8 @@ function App() {
           messageProcessor={Graph}
           chartConfig={{
             title: "Event count",
-            xAxisLabel: "time",
-            yAxisLabel: "count",
+            xAxisLabel: "count",
+            yAxisLabel: "time",
           }}
         />
         <WebSocketComponent
@@ -33,8 +33,8 @@ function App() {
           messageProcessor={Graph}
           chartConfig={{
             title: "Length change",
-            xAxisLabel: "time",
-            yAxisLabel: "count",
+            xAxisLabel: "count",
+            yAxisLabel: "time",
           }}
         />
         <WebSocketComponent

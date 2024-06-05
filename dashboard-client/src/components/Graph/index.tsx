@@ -8,16 +8,25 @@ const Graph: React.FC<MessageProps> = ({
   xAxisLabel,
   yAxisLabel,
 }) => {
+  const dataset = messages.map((message, idx) => {
+    return {
+      message: parseFloat(message),
+      timestamp: parseFloat(timestamps[idx]) - new Date().getSeconds(),
+    };
+  });
+  console.log(dataset);
+
   return (
     <div className="widget">
       <h2>{title}</h2>
       <LineChart
         title={title}
+        dataset={dataset}
         series={[
           {
-            data: messages.map((val) => parseFloat(val)),
+            dataKey: "message",
+            label: xAxisLabel,
             area: true,
-            label: yAxisLabel,
           },
         ]}
       />

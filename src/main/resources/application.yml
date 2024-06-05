@@ -17,11 +17,11 @@ spring:
         spring.json.trusted.packages: "*"
     topic:
       auto-create: true
-jpa:
+  jpa:
     open-in-view: false
     show-sql: true
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
 
 logging:
   level:

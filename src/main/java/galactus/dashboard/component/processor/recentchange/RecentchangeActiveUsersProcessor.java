@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import galactus.dashboard.component.processor.BaseEventProcessor;
+import galactus.dashboard.entity.RecentchangeActiveUsersEntity;
+import galactus.dashboard.repository.RecentchangeActiveUsersRepository;
 import lombok.Data;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -17,22 +19,31 @@ import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Suppressed;
 import org.apache.kafka.streams.kstream.TimeWindows;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.configurationprocessor.json.JSONArray;
-import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
+
+    @Autowired
+    private RecentchangeActiveUsersRepository recentchangeActiveUsersRepository;
+    private ConcurrentHashMap<String, WikiUser> wikiUsers = new ConcurrentHashMap<>();
+
+    public RecentchangeActiveUsersProcessor(RecentchangeActiveUsersRepository recentchangeActiveUsersRepository) {
+        this.recentchangeActiveUsersRepository = recentchangeActiveUsersRepository;
+    }
 
     @Data
     private static class WikiUser {
@@ -60,7 +71,6 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
         List<WikiUser> list = objectMapper.readValue(serializedWikiUsers, new TypeReference<>() {
         });
 
-        // Iterate over the list
         for (WikiUser wikiUser : list) {
             if (wikiUser.isBot()) {
                 bots.add(wikiUser);
@@ -93,6 +103,25 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
         }
     }
 
+    public void updateOrCreateRecentchangeActiveUsers(String activeUsers) {
+        Optional<RecentchangeActiveUsersEntity> optionalEntity = recentchangeActiveUsersRepository.findTopByOrderByCreatedAtDesc();
+
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+
+        if (optionalEntity.isPresent()) {
+            RecentchangeActiveUsersEntity entity = optionalEntity.get();
+            if (entity.getCreatedAt().isAfter(startOfDay) && entity.getCreatedAt().isBefore(endOfDay)) {
+                entity.setValue(activeUsers);
+                recentchangeActiveUsersRepository.save(entity);
+                return;
+            }
+        }
+
+        RecentchangeActiveUsersEntity newEntity = new RecentchangeActiveUsersEntity(activeUsers);
+        recentchangeActiveUsersRepository.save(newEntity);
+    }
+
     @Autowired
     @Override
     public void buildPipeline(StreamsBuilder streamsBuilder) {
@@ -108,44 +137,44 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
                 .groupBy((k, v) -> "", Grouped.with(STRING_SERDE, STRING_SERDE))
                 .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofDays(1)))
                 .aggregate(
-                        () -> new ConcurrentHashMap<String, WikiUser>(),
-                        (k, v, map) -> {
+                        () -> {
+                            wikiUsers = new ConcurrentHashMap<>();
+                            return "";
+                        },
+                        (k, v, ignore) -> {
                             try {
                                 JsonNode jsonNode = mapper.readTree(v);
                                 String username = jsonNode.get("user").asText();
                                 boolean isBot = jsonNode.get("bot").asBoolean();
                                 int diff = jsonNode.get("length").get("new").asInt() - jsonNode.get("length").get("old").asInt();
 
-                                WikiUser user = map.getOrDefault(k, new WikiUser(username, diff, isBot));
+                                WikiUser user = wikiUsers.getOrDefault(k, new WikiUser(username, diff, isBot));
                                 user.updateChangesLength(diff);
-                                map.put(username, user);
+                                wikiUsers.put(username, user);
 
-                                return map;
+                                return "";
                             } catch (JsonProcessingException e) {
                                 System.out.println("Polacy nic się nie stało");
-                                return map;
+                                return "";
                             }
                         },
-                        Materialized.with(STRING_SERDE, new JsonSerde<>(ConcurrentHashMap.class)))
-                .suppress(Suppressed.untilTimeLimit(Duration.ofSeconds(30), Suppressed.BufferConfig.unbounded()))
+                        Materialized.with(STRING_SERDE, STRING_SERDE))
+                .suppress(Suppressed.untilTimeLimit(Duration.ofSeconds(10), Suppressed.BufferConfig.unbounded()))
                 .toStream()
-                .peek((k, v) -> {
-                    try {
-                        System.out.println(mapper.writeValueAsString(v.values()));
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
                 .map((windowedKey, map) -> {
                     try {
-                        String jsonString = mapper.writeValueAsString(map.values());
+                        String jsonString = mapper.writeValueAsString(wikiUsers.values());
                         jsonString = cropUsersCollection(jsonString);
                         return KeyValue.pair(windowedKeyToString(windowedKey), jsonString);
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
                 })
-                .peek((k, v) -> System.out.println("k: " + k + ", top list: " + v))
+                .peek((k, v) ->
+                {
+                    System.out.println("k: " + k + ", active users top lists: " + v);
+                    updateOrCreateRecentchangeActiveUsers(v);
+                })
                 .to("recentchange.active_users", Produced.with(STRING_SERDE, STRING_SERDE));
 
     }
