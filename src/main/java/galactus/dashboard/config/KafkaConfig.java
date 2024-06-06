@@ -47,6 +47,11 @@ public class KafkaConfig {
     static final private String MAX_REQUEST_SIZE = "10485880";
 
 
+    /**
+     * Provides the default Kafka Streams configuration.
+     *
+     * @return a {@link KafkaStreamsConfiguration} object containing the configuration properties for Kafka Streams.
+     */
     @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
     KafkaStreamsConfiguration kStreamsConfig() {
         Map<String, Object> props = new HashMap<>();
@@ -62,6 +67,11 @@ public class KafkaConfig {
         return new KafkaStreamsConfiguration(props);
     }
 
+    /**
+     * Provides the configuration properties for Kafka Producer.
+     *
+     * @return a {@link Properties} object containing the configuration properties for Kafka Producer.
+     */
     @Bean(name = "kafkaProducerProps")
     public Properties kafkaProducerProps(){
         Properties props = new Properties();
@@ -73,6 +83,11 @@ public class KafkaConfig {
         return props;
     }
 
+    /**
+     * Provides the configuration properties for Kafka Consumer.
+     *
+     * @return a {@link Map} object containing the configuration properties for Kafka Consumer.
+     */
     @Bean(name = "kafkaConsumerProps")
     public Map<String,Object> kafkaConsumerProps(){
         Map<String,Object> props= new HashMap<>();
@@ -84,16 +99,27 @@ public class KafkaConfig {
 
         return props;
     }
+
+    /**
+     * Provides a {@link ConsumerFactory} for creating Kafka Consumers.
+     *
+     * @return a {@link ConsumerFactory} object for creating Kafka Consumers.
+     */
     @Bean
     public ConsumerFactory<String, String> consumerFactory(){
         return new DefaultKafkaConsumerFactory<>(kafkaConsumerProps());
     }
+
+    /**
+     * Provides a {@link ConcurrentKafkaListenerContainerFactory} for creating Kafka Listener Containers.
+     *
+     * @return a {@link KafkaListenerContainerFactory} object for creating Kafka Listener Containers.
+     */
     @Bean
     public KafkaListenerContainerFactory<ConcurrentMessageListenerContainer<String,String>> kafkaListenerContainerFactory(){
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         return factory;
     }
-
 
 }

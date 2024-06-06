@@ -1,3 +1,16 @@
+/**
+ * RankingCharts Component
+ *
+ * The `RankingCharts` component is a React functional component used to display multiple bar charts based on the provided data.
+ *
+ * Props:
+ * - `messages`: An array of JSON strings containing data for generating the bar charts.
+ * - `timestamps`: Not used in this component.
+ * - `title`: A string representing the title of the charts.
+ * - `xAxisLabel`: A string representing the label for the x-axis of the charts.
+ * - `yAxisLabel`: Not used in this component.
+ **/
+
 import React from "react";
 import { BarChart } from "@mui/x-charts/BarChart";
 import MessageProps from "../../types/MessageProps";
