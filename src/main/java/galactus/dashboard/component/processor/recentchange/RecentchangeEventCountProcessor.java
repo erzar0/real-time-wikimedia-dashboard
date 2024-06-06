@@ -20,9 +20,15 @@ import static org.apache.kafka.streams.kstream.Suppressed.BufferConfig.unbounded
 @Component
 public class RecentchangeEventCountProcessor extends BaseEventProcessor {
 
+
     @Autowired
     private RecentchangeEventCountRepository eventchangeEventCountRepository;
 
+    /**
+     * Builds the Kafka Streams pipeline for processing recent change event counts.
+     *
+     * @param streamsBuilder The StreamsBuilder used to construct the pipeline.
+     */
     @Autowired
     @Override
     public void buildPipeline(StreamsBuilder streamsBuilder) {
@@ -30,7 +36,7 @@ public class RecentchangeEventCountProcessor extends BaseEventProcessor {
         streamsBuilder.stream("recentchange", Consumed.with(STRING_SERDE, STRING_SERDE))
                 .filter((k, v) -> v != null)
                 .groupBy((k, v) -> "", Grouped.with(STRING_SERDE, STRING_SERDE))
-                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(3)))
+                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(AGGREGATION_INTERVAL_SECONDS)))
                 .count()
                 .suppress(Suppressed.untilWindowCloses(unbounded()))
                 .toStream()

@@ -14,6 +14,8 @@ import java.time.format.DateTimeFormatter;
 
 public abstract class BaseEventProcessor {
 
+    protected final static int AGGREGATION_INTERVAL_SECONDS = 3;
+
     protected static final ObjectMapper mapper = new ObjectMapper();
     protected static final Serde<String> STRING_SERDE = Serdes.String();
     protected static final Serde<Integer> INTEGER_SERDE = Serdes.Integer();

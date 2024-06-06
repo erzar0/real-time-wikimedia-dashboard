@@ -1,9 +1,7 @@
 package galactus.dashboard.component.processor.recentchange;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import galactus.dashboard.component.processor.BaseEventProcessor;
@@ -18,6 +16,7 @@ import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Suppressed;
 import org.apache.kafka.streams.kstream.TimeWindows;
+import org.apache.kafka.streams.kstream.Windowed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -37,13 +36,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
 
+    private final static int AGGREGATION_WINDOW_SIZE_DAYS = 1;
     @Autowired
     private RecentchangeActiveUsersRepository recentchangeActiveUsersRepository;
     private ConcurrentHashMap<String, WikiUser> wikiUsers = new ConcurrentHashMap<>();
 
+    /**
+     * Constructor for RecentchangeActiveUsersProcessor.
+     *
+     * @param recentchangeActiveUsersRepository Repository for recording top lists of active users.
+     */
     public RecentchangeActiveUsersProcessor(RecentchangeActiveUsersRepository recentchangeActiveUsersRepository) {
         this.recentchangeActiveUsersRepository = recentchangeActiveUsersRepository;
     }
+
+    /**
+     * Represents a Wikimedia user with their username, length of the changes made on the pages as amount of characters, and bot status.
+     */
 
     @Data
     private static class WikiUser {
@@ -51,6 +60,13 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
         AtomicInteger changesLength = new AtomicInteger();
         boolean isBot;
 
+        /**
+         * Constructor for WikiUser.
+         *
+         * @param username       The username of the user.
+         * @param changesLength  The length of changes made by the user.
+         * @param isBot          Indicates if the user is a bot.
+         */
         @JsonCreator
         public WikiUser(@JsonProperty("username") String username, @JsonProperty("changesLength") int changesLength, @JsonProperty("bot") boolean isBot) {
             this.username = username;
@@ -58,20 +74,54 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
             this.isBot = isBot;
         }
 
+        /**
+         * Updates the changes length by adding the specified difference.
+         *
+         * @param diff The difference to add to the changes length.
+         */
         void updateChangesLength(int diff) {
             changesLength.addAndGet(diff);
         }
     }
 
-    private static String cropUsersCollection(String serializedWikiUsers) throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
+    /**
+     * Builds the Kafka Streams pipeline.
+     *
+     * @param streamsBuilder The StreamsBuilder used to construct the pipeline.
+     */
+    @Autowired
+    @Override
+    public void buildPipeline(StreamsBuilder streamsBuilder) {
+
+        streamsBuilder.stream("recentchange", Consumed.with(STRING_SERDE, STRING_SERDE))
+                .filter((k, v) -> v != null)
+                .mapValues(RecentchangeActiveUsersProcessor::readJsonNode)
+                .filter(this::isValidJsonNode)
+                .mapValues(RecentchangeActiveUsersProcessor::serializeJsonNode)
+                .groupBy((k, v) -> "", Grouped.with(STRING_SERDE, STRING_SERDE))
+                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofDays(AGGREGATION_WINDOW_SIZE_DAYS)))
+                .aggregate(
+                        this::initializeAggregate,
+                        this::aggregateChanges,
+                        Materialized.with(STRING_SERDE, STRING_SERDE))
+                .suppress(Suppressed.untilTimeLimit(Duration.ofSeconds(AGGREGATION_INTERVAL_SECONDS), Suppressed.BufferConfig.unbounded()))
+                .toStream()
+                .map(this::convertToKeyValue)
+                .peek(this::logAndPersist)
+                .to("recentchange.active_users", Produced.with(STRING_SERDE, STRING_SERDE));
+    }
+
+    /**
+     * Crops and serializes the users collection to JSON.
+     *
+     * @return The JSON string representing the cropped users collection.
+     * @throws JsonProcessingException If there is an error processing the JSON.
+     */
+    private String croppedAndSerializedUsersCollection() throws JsonProcessingException {
         List<WikiUser> users = new ArrayList<>();
         List<WikiUser> bots = new ArrayList<>();
 
-        List<WikiUser> list = objectMapper.readValue(serializedWikiUsers, new TypeReference<>() {
-        });
-
-        for (WikiUser wikiUser : list) {
+        for (WikiUser wikiUser : wikiUsers.values()) {
             if (wikiUser.isBot()) {
                 bots.add(wikiUser);
             } else {
@@ -103,6 +153,11 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
         }
     }
 
+    /**
+     * Updates or creates new entry in the repository.
+     *
+     * @param activeUsers The active users data to update or create.
+     */
     public void updateOrCreateRecentchangeActiveUsers(String activeUsers) {
         Optional<RecentchangeActiveUsersEntity> optionalEntity = recentchangeActiveUsersRepository.findTopByOrderByCreatedAtDesc();
 
@@ -122,60 +177,78 @@ public class RecentchangeActiveUsersProcessor extends BaseEventProcessor {
         recentchangeActiveUsersRepository.save(newEntity);
     }
 
-    @Autowired
-    @Override
-    public void buildPipeline(StreamsBuilder streamsBuilder) {
+    /**
+     * Validates the JSON node to check if it contains the required fields.
+     *
+     * @param k The key (unused).
+     * @param v The JSON node to validate.
+     * @return true if the JSON node is valid, false otherwise.
+     */
+    private boolean isValidJsonNode(String k, JsonNode v) {
+        return v.hasNonNull("length") &&
+                v.hasNonNull("bot") &&
+                v.get("length").hasNonNull("old") &&
+                v.get("length").hasNonNull("new");
+    }
 
-        streamsBuilder.stream("recentchange", Consumed.with(STRING_SERDE, STRING_SERDE))
-                .filter((k, v) -> v != null)
-                .mapValues(RecentchangeActiveUsersProcessor::readJsonNode)
-                .filter((k, v) -> v.hasNonNull("length")
-                        && v.hasNonNull("bot")
-                        && v.get("length").hasNonNull("old")
-                        && v.get("length").hasNonNull("new"))
-                .mapValues(RecentchangeActiveUsersProcessor::serializeJsonNode)
-                .groupBy((k, v) -> "", Grouped.with(STRING_SERDE, STRING_SERDE))
-                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofDays(1)))
-                .aggregate(
-                        () -> {
-                            wikiUsers = new ConcurrentHashMap<>();
-                            return "";
-                        },
-                        (k, v, ignore) -> {
-                            try {
-                                JsonNode jsonNode = mapper.readTree(v);
-                                String username = jsonNode.get("user").asText();
-                                boolean isBot = jsonNode.get("bot").asBoolean();
-                                int diff = jsonNode.get("length").get("new").asInt() - jsonNode.get("length").get("old").asInt();
+    /**
+     * Initializes the aggregate by creating a new ConcurrentHashMap.
+     *
+     * @return An empty string.
+     */
+    private String initializeAggregate() {
+        wikiUsers = new ConcurrentHashMap<>();
+        return "";
+    }
 
-                                WikiUser user = wikiUsers.getOrDefault(k, new WikiUser(username, diff, isBot));
-                                user.updateChangesLength(diff);
-                                wikiUsers.put(username, user);
+    /**
+     * Aggregates the changes by updating the wikiUsers map.
+     *
+     * @param k      The key (unused).
+     * @param v      The value containing the changes data.
+     * @param ignore An ignored parameter.
+     * @return An empty string.
+     */
+    private String aggregateChanges(String k, String v, String ignore) {
+        try {
+            JsonNode jsonNode = mapper.readTree(v);
+            String username = jsonNode.get("user").asText();
+            boolean isBot = jsonNode.get("bot").asBoolean();
+            int diff = jsonNode.get("length").get("new").asInt() - jsonNode.get("length").get("old").asInt();
 
-                                return "";
-                            } catch (JsonProcessingException e) {
-                                System.out.println("Polacy nic się nie stało");
-                                return "";
-                            }
-                        },
-                        Materialized.with(STRING_SERDE, STRING_SERDE))
-                .suppress(Suppressed.untilTimeLimit(Duration.ofSeconds(10), Suppressed.BufferConfig.unbounded()))
-                .toStream()
-                .map((windowedKey, map) -> {
-                    try {
-                        String jsonString = mapper.writeValueAsString(wikiUsers.values());
-                        jsonString = cropUsersCollection(jsonString);
-                        return KeyValue.pair(windowedKeyToString(windowedKey), jsonString);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .peek((k, v) ->
-                {
-                    System.out.println("k: " + k + ", active users top lists: " + v);
-                    updateOrCreateRecentchangeActiveUsers(v);
-                })
-                .to("recentchange.active_users", Produced.with(STRING_SERDE, STRING_SERDE));
+            WikiUser user = wikiUsers.getOrDefault(username, new WikiUser(username, diff, isBot));
+            user.updateChangesLength(diff);
+            wikiUsers.put(username, user);
 
+        } catch (JsonProcessingException e) {
+            System.out.println("Polacy nic się nie stało");
+        }
+        return "";
+    }
+
+    /**
+     * Converts the aggregated data to a KeyValue pair.
+     *
+     * @param windowedKey The windowed key.
+     * @param ignore      An ignored parameter.
+     * @return A KeyValue pair with the windowed key and the cropped and serialized users collection.
+     */
+    private KeyValue<String, String> convertToKeyValue(Windowed<String> windowedKey, String ignore) {
+        try {
+            return KeyValue.pair(windowedKeyToString(windowedKey), croppedAndSerializedUsersCollection());
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Logs the active users data and updates or creates the new entry.
+     *
+     * @param k The key.
+     * @param v The active users data.
+     */
+    private void logAndPersist(String k, String v) {
+        System.out.println("k: " + k + ", active users top lists: " + v);
+        updateOrCreateRecentchangeActiveUsers(v);
     }
 }

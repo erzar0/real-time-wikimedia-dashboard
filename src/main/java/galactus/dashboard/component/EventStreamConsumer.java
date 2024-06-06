@@ -1,10 +1,8 @@
 package galactus.dashboard.component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import galactus.dashboard.component.processor.recentchange.RecentchangeActiveUsersProcessor;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +17,6 @@ import reactor.core.publisher.Flux;
 
 import java.util.Properties;
 
-
 @Component
 public class EventStreamConsumer implements ApplicationRunner {
 
@@ -27,6 +24,12 @@ public class EventStreamConsumer implements ApplicationRunner {
     @Qualifier("kafkaProducerProps")
     private Properties kafkaProducerProps;
 
+    /**
+     * Runs the application and starts consuming events from the Wikimedia stream,
+     * then produces these events to a Kafka topic.
+     *
+     * @param args the application arguments
+     */
     @Override
     public void run(ApplicationArguments args) {
         try {
