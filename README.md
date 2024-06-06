@@ -23,8 +23,6 @@ The main functionalities of the dashboard include:
 
 By providing these functionalities, the Real-Time Dashboard offers insights into the dynamic nature of Wikipedia pages and allows users to track changes in real-time, analyze user behavior, and monitor the evolution of content over time.
 
-![Implementation](img/topics.png)
-
 ## Backend Implementation 
 
 The functionality on the backend side is implemented in the following steps:
@@ -38,6 +36,8 @@ The functionality on the backend side is implemented in the following steps:
 4. **Data Analysis**: Aggregates written to the database can be further used for data analysis in wider time windows, although this functionality is not implemented.
 
 By following this process, the backend efficiently processes events from the Wikimedia Server Sent Events streams, aggregates them, and provides them to the client for real-time monitoring.
+
+![Implementation](img/topics.png)
 
 ## Frontend Implementation
 
